@@ -1,0 +1,15 @@
+﻿@page "/"
+
+@* Redirige automáticamente a /lotes al entrar al proyecto *@
+
+<PageTitle>Redirigiendo...</PageTitle>
+
+@code {
+    [Inject] NavigationManager Nav { get; set; } = default!;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+            Nav.NavigateTo("/lotes", replace: true);
+    }
+}
