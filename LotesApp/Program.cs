@@ -1,4 +1,4 @@
-﻿using LotesApp.Components;
+﻿using LotesApp.Frontend;
 using LotesApp.Models;
 using LotesApp.Services;
 

@@ -1,0 +1,37 @@
+﻿@* ═══════════════════════════════════════════════
+   MODAL DE CONFIRMACIÓN DE ENVÍO DE LOTE
+═══════════════════════════════════════════════ *@
+
+@using LotesApp.Models
+
+@if (Lote is not null)
+{
+    <div class="lotes-modal-backdrop">
+        <div class="lotes-modal">
+            <div class="lotes-modal-header">
+                <h2 class="lotes-modal-title">Confirmar envío</h2>
+                <button class="lotes-modal-close" @onclick="OnCancelar">×</button>
+            </div>
+            <div class="lotes-modal-body">
+                <p>¿Deseas enviar el lote <strong>@Lote.Id</strong> a la red interna del banco?</p>
+                <div class="lotes-modal-meta">
+                    <span>📅 Fecha de lote: <strong>@Lote.FechaLote.ToString("dd/MM/yyyy")</strong></span>
+                    <span>📦 Total órdenes: <strong>@Lote.TotalOrdenesGeneradas.ToString("N0")</strong></span>
+                </div>
+                <div class="lotes-modal-warning">
+                    ⚠ Esta acción enviará el archivo al proveedor a través de la red interna.
+                </div>
+            </div>
+            <div class="lotes-modal-footer">
+                <button class="btn-modal-cancel" @onclick="OnCancelar">Cancelar</button>
+                <button class="btn-modal-confirm" @onclick="OnConfirmar">Confirmar envío</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public LoteModel? Lote { get; set; }
+    [Parameter] public EventCallback OnConfirmar { get; set; }
+    [Parameter] public EventCallback OnCancelar { get; set; }
+}

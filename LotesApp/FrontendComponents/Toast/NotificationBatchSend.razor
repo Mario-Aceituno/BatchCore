@@ -1,0 +1,17 @@
+﻿@* ═══════════════════════════════════════════════
+    TOAST DE NOTIFICACIÓN DE ENVÍO DE LOTES
+═══════════════════════════════════════════════ *@
+
+@if (Mensaje is not null)
+{
+    <div class="lotes-toast toast-@Tipo">
+        <span>@Mensaje</span>
+        <button class="lotes-toast-close" @onclick="OnCerrar">×</button>
+    </div>
+}
+
+@code {
+    [Parameter] public string? Mensaje { get; set; }
+    [Parameter] public string Tipo { get; set; } = "success";
+    [Parameter] public EventCallback OnCerrar { get; set; }
+}

@@ -1,0 +1,88 @@
+﻿@* ═══════════════════════════════════════════════
+                  CARD DE LOTE
+═══════════════════════════════════════════════ *@
+
+@using LotesApp.Models
+
+<div class="lot-card">
+
+    <!-- Fecha de lote -->
+    <div>
+        <div class="field-label">Fecha de lote</div>
+        <div class="field-value">@Lote.FechaLote.ToString("dd/MM/yyyy")</div>
+        <div class="lot-id">@Lote.Id</div>
+    </div>
+
+    <!-- Total órdenes -->
+    <div>
+        <div class="field-label">Total órdenes</div>
+        <div class="field-value">@Lote.TotalOrdenesGeneradas.ToString("N0")</div>
+    </div>
+
+    <!-- Progreso -->
+    <div>
+        <div class="field-label">
+            Progreso — <strong>@Lote.PorcentajeProgreso%</strong>
+        </div>
+        <div class="progress-track">
+            <div class="progress-fill @(Lote.PorcentajeProgreso >= 100 ? "complete" : "")"
+                 style="width: @Lote.PorcentajeProgreso%">
+            </div>
+        </div>
+        <div class="progress-sub">
+            @Lote.OrdenesCompletadas.ToString("N0") / @Lote.TotalOrdenesGeneradas.ToString("N0") órdenes
+        </div>
+    </div>
+
+    <!-- Estado -->
+    <div>
+        <span class="lot-badge @BadgeClass">
+            <span class="lot-badge-dot"></span>
+            @Lote.Estado
+        </span>
+    </div>
+
+    <!-- Acción -->
+    <div>
+        @if (Lote.Estado == "Listo para enviar")
+        {
+            <button class="btn-enviar"
+                    @onclick="() => OnEnviar.InvokeAsync(Lote)"
+                    disabled="@(EnviandoId == Lote.Id)">
+                @if (EnviandoId == Lote.Id)
+                {
+                    <span>Enviando...</span>
+                }
+                else
+                {
+                    <span>Enviar</span>
+                }
+            </button>
+        }
+        else if (Lote.Estado == "Enviado")
+        {
+            <span class="lot-badge badge-sent">
+                <span class="lot-badge-dot"></span>
+                Enviado
+            </span>
+        }
+        else
+        {
+            <span class="btn-enviar-placeholder">—</span>
+        }
+    </div>
+
+</div>
+
+@code {
+    [Parameter] public LoteModel Lote { get; set; } = default!;
+    [Parameter] public EventCallback<LoteModel> OnEnviar { get; set; }
+    [Parameter] public string? EnviandoId { get; set; }
+
+    private string BadgeClass => Lote.Estado switch
+    {
+        "Listo para enviar" => "badge-ready",
+        "Enviado" => "badge-sent",
+        _ => "badge-pending"
+    };
+}

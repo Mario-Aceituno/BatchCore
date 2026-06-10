@@ -1,0 +1,262 @@
+﻿@page "/"
+@layout LotesLayout
+@rendermode InteractiveServer
+@using LotesApp.Models
+@using LotesApp.Services
+@inject LoteService LoteService
+
+<PageTitle>Gestión de Lotes</PageTitle>
+
+<style>
+    .lotes-page * {
+        box-sizing: border-box;
+    }
+
+    .lotes-page {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #f5f5f5;
+        min-height: 100vh;
+    }
+
+    .lotes-content {
+        padding: 2rem;
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .lotes-page-header {
+        margin-bottom: 1.75rem;
+    }
+
+        .lotes-page-header h1 {
+            font-size: 20px;
+            font-weight: 500;
+            color: #1a1a1a;
+            margin: 0 0 4px;
+        }
+
+        .lotes-page-header p {
+            font-size: 13px;
+            color: #888;
+            margin: 0;
+        }
+
+    .lotes-section-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 1rem;
+    }
+
+    .lotes-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .lotes-center {
+        text-align: center;
+        padding: 4rem 0;
+        color: #888;
+    }
+
+    .lotes-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid #f0f0f0;
+        border-top-color: #C8102E;
+        border-radius: 50%;
+        animation: lotes-spin 0.7s linear infinite;
+        margin: 0 auto 1rem;
+    }
+
+    @@keyframes lotes-spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .lotes-error {
+        background: #fff5f5;
+        border: 0.5px solid #fecaca;
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        color: #991b1b;
+        font-size: 14px;
+    }
+
+    /*---------- Prueba - Quitar después ----------------*/
+    .btn-enviar {
+        background: #C8102E;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 20px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        width: 100%;
+        transition: background 0.15s ease;
+    }
+
+        .btn-enviar:hover:not(:disabled) {
+            background: #a50d26;
+        }
+
+        .btn-enviar:disabled {
+            background: #e8a0aa;
+            cursor: not-allowed;
+        }
+
+    .btn-enviar-placeholder {
+        color: #ccc;
+        font-size: 13px;
+        text-align: center;
+        display: block;
+    }
+    /*-------------------------------------------------------------*/
+
+</style>
+
+<div class="lotes-page">
+
+    <!-- NAVBAR -->
+    <BatchManagementNav />
+
+    <div class="lotes-content">
+
+        <div class="lotes-page-header">
+            <h1>Lotes de archivos</h1>            
+        </div>
+
+        <!-- PRUEBA TEMPORAL — borrar después -->
+        <button class="btn-enviar" style="width:auto; margin-bottom:1rem;"
+                @onclick="CrearLotePrueba">
+            + Crear lote de prueba
+        </button>
+        <p style="font-size:12px; color:#888;">@mensajePrueba</p>
+        <!-- FIN PRUEBA -->
+
+        @* ══════════════════════════════════════════
+           CARDS DE RESUMEN — descomentar para activar
+           ══════════════════════════════════════════
+        <ResumeCards Lotes="lotes" />
+        *@
+
+        @if (isLoading)
+        {
+            <div class="lotes-center">
+                <div class="lotes-spinner"></div>
+                <p>Cargando lotes...</p>
+            </div>
+        }
+        else if (errorMessage is not null)
+        {
+            <div class="lotes-error">⚠ @errorMessage</div>
+        }
+        else
+        {
+            <div class="lotes-section-label">Lotes registrados</div>
+
+            <!-- CARDS DE LOTES -->
+            <div class="lotes-grid">
+                @if (lotes is null || lotes.Count == 0)
+                {
+                    <div class="lotes-center">No se encontraron lotes registrados.</div>
+                }
+                else
+                {
+                    @foreach (var lote in lotes)
+                    {
+                        <BatchCard Lote="lote"
+                                   OnEnviar="ConfirmarEnvio"
+                                   EnviandoId="@enviandoId" />
+                    }
+                }
+            </div>
+        }
+
+    </div>
+</div>
+
+<!-- TOAST -->
+<NotificationBatchSend Mensaje="@toastMessage"
+                       Tipo="@toastType"
+                       OnCerrar="() => toastMessage = null" />
+
+<!-- MODAL DE CONFIRMACIÓN -->
+<ConfirmSendModal Lote="loteParaEnviar"
+                  OnConfirmar="EjecutarEnvio"
+                  OnCancelar="CancelarEnvio" />
+
+@code {
+    private List<LoteModel>? lotes;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string? enviandoId;
+    private LoteModel? loteParaEnviar;
+    private string? toastMessage;
+    private string toastType = "success";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            lotes = await LoteService.GetLotesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar los lotes: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ConfirmarEnvio(LoteModel lote) => loteParaEnviar = lote;
+    private void CancelarEnvio() => loteParaEnviar = null;
+
+    private async Task EjecutarEnvio()
+    {
+        if (loteParaEnviar is null) return;
+        enviandoId = loteParaEnviar.Id;
+        loteParaEnviar = null;
+
+        try
+        {
+            await LoteService.EnviarLoteAsync(enviandoId);
+            await MostrarToast("Lote enviado exitosamente a la red interna.", "success");
+            lotes = await LoteService.GetLotesAsync();
+        }
+        catch (Exception ex)
+        {
+            await MostrarToast($"Error al enviar el lote: {ex.Message}", "danger");
+        }
+        finally
+        {
+            enviandoId = null;
+        }
+    }
+
+    private async Task MostrarToast(string mensaje, string tipo)
+    {
+        toastMessage = mensaje;
+        toastType = tipo;
+        StateHasChanged();
+        await Task.Delay(4000);
+        toastMessage = null;
+        StateHasChanged();
+    }
+
+    private string? mensajePrueba;
+
+    private async Task CrearLotePrueba()
+    {
+        var lote = await LoteService.CrearLoteAsync(DateTime.Today, 2500);
+        mensajePrueba = $"Lote creado: {lote.Id}";
+        lotes = await LoteService.GetLotesAsync();
+    }
+}

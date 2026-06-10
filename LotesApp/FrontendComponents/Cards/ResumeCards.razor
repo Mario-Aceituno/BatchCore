@@ -1,0 +1,28 @@
+﻿@* ═══════════════════════════════════════════════
+           CARD DE RESUMEN DE LOTES
+═══════════════════════════════════════════════ *@
+
+@using LotesApp.Models
+
+<div class="resume-stats-row">
+    <div class="resume-stat-card">
+        <div class="resume-stat-label">Total de lotes</div>
+        <div class="resume-stat-value">@(Lotes?.Count ?? 0)</div>
+    </div>
+    <div class="resume-stat-card">
+        <div class="resume-stat-label">Listos para enviar</div>
+        <div class="resume-stat-value red">
+            @(Lotes?.Count(l => l.Estado == "Listo para enviar") ?? 0)
+        </div>
+    </div>
+    <div class="resume-stat-card">
+        <div class="resume-stat-label">Órdenes totales</div>
+        <div class="resume-stat-value">
+            @((Lotes?.Sum(l => l.TotalOrdenesGeneradas) ?? 0).ToString("N0"))
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<LoteModel>? Lotes { get; set; }
+}
