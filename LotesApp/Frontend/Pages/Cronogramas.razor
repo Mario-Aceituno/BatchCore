@@ -1,0 +1,220 @@
+﻿@page "/cronogramas/{LoteId}"
+@layout LotesLayout
+@rendermode InteractiveServer
+@using LotesApp.Models
+@using LotesApp.Services
+@inject CronogramaService CronogramaService
+@inject NavigationManager Nav
+
+<PageTitle>Cronogramas — @LoteId</PageTitle>
+
+<div class="lotes-page">
+
+    <!-- NAVBAR -->
+    <BatchManagementNav />
+
+    <div class="lotes-content">
+
+        <!-- Encabezado -->
+        <div class="cron-header">
+            <div>
+                <button class="btn-volver" @onclick='() => Nav.NavigateTo("/")'>
+                    ← Volver a lotes
+                </button>
+                <h1>Cronogramas del lote <span class="cron-lote-id">@LoteId</span></h1>
+                <p>Lista de clientes y sus préstamos asociados</p>
+            </div>
+            <div class="cron-total-badge">
+                @totalRegistros registros
+            </div>
+        </div>
+
+        <!-- Filtro -->
+        <div class="cron-filtro-row">
+            <input class="cron-input"
+                   type="text"
+                   placeholder="Buscar por nombre o número de préstamo..."
+                   @oninput="OnFiltroChanged" />
+        </div>
+
+        <!-- Tabla -->
+        @if (isLoading)
+        {
+            <div class="lotes-center">
+                <div class="lotes-spinner"></div>
+                <p>Cargando cronogramas...</p>
+            </div>
+        }
+        else if (errorMessage is not null)
+        {
+            <div class="lotes-error">⚠ @errorMessage</div>
+        }
+        else if (cronogramas is null || cronogramas.Count == 0)
+        {
+            <div class="lotes-center">No se encontraron cronogramas para este lote.</div>
+        }
+        else
+        {
+            <div class="cron-table-wrapper">
+                <table class="cron-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Nombre del cliente</th>
+                            <th>Número de préstamo</th>
+                            <th>Teléfono</th>
+                            <th>Tasa</th>
+                            <th>Tipo</th>
+                            <th class="text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < cronogramas.Count; i++)
+                        {
+                            var cronograma = cronogramas[i];
+                            var numero = ((paginaActual - 1) * porPagina) + i + 1;
+                            <tr>
+                                <td class="cron-num">@numero</td>
+                                <td class="cron-nombre">@cronograma.NombreCliente</td>
+                                <td class="cron-mono">@cronograma.NumeroPrestamo</td>
+                                <td>@cronograma.NumeroTelefonico</td>
+                                <td>@cronograma.Tasa.ToString("N3")%</td>
+                                <td>
+                                    <span class="cron-tipo-badge @(cronograma.Tipo == "Libranza" ? "tipo-libranza" : "tipo-personal")">
+                                        @cronograma.Tipo
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn-ver-detalles"
+                                            @onclick="() => VerDetalles(cronograma.NumeroPrestamo)">
+                                        Ver detalles
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div class="cron-paginacion">
+                <span class="cron-pag-info">
+                    Mostrando @(((paginaActual - 1) * porPagina) + 1)–@(Math.Min(paginaActual * porPagina, totalRegistros)) de @totalRegistros
+                </span>
+                <div class="cron-pag-btns">
+                    <button class="btn-pag" disabled="@(paginaActual == 1)" @onclick="PaginaAnterior">← Anterior</button>
+                    @for (int p = 1; p <= totalPaginas; p++)
+                    {
+                        var pagNum = p;
+                        <button class="btn-pag @(pagNum == paginaActual ? "btn-pag-activo" : "")"
+                                @onclick="() => IrAPagina(pagNum)">
+                            @pagNum
+                        </button>
+                    }
+                    <button class="btn-pag" disabled="@(paginaActual == totalPaginas)" @onclick="PaginaSiguiente">Siguiente →</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .lotes-page * { box-sizing: border-box; }
+    .lotes-page { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; min-height: 100vh; }
+    .lotes-content { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+    .lotes-center { text-align: center; padding: 4rem 0; color: #888; }
+    .lotes-spinner { width: 32px; height: 32px; border: 3px solid #f0f0f0; border-top-color: #C8102E; border-radius: 50%; animation: lotes-spin 0.7s linear infinite; margin: 0 auto 1rem; }
+    @@keyframes lotes-spin { to { transform: rotate(360deg); } }
+    .lotes-error { background: #fff5f5; border: 0.5px solid #fecaca; border-radius: 8px; padding: 1rem 1.25rem; color: #991b1b; font-size: 14px; }
+
+    .cron-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; }
+    .cron-header h1 { font-size: 20px; font-weight: 500; color: #1a1a1a; margin: 8px 0 4px; }
+    .cron-header p { font-size: 13px; color: #888; margin: 0; }
+    .cron-lote-id { color: #C8102E; font-family: 'Courier New', monospace; }
+    .cron-total-badge { background: #fff; border: 0.5px solid #e0e0e0; border-radius: 8px; padding: 0.5rem 1rem; font-size: 13px; font-weight: 500; color: #444; align-self: center; }
+
+    .btn-volver { background: none; border: none; color: #C8102E; font-size: 13px; cursor: pointer; padding: 0; font-weight: 500; }
+    .btn-volver:hover { text-decoration: underline; }
+
+    .cron-filtro-row { margin-bottom: 1.25rem; }
+    .cron-input { width: 100%; max-width: 420px; padding: 8px 14px; border: 0.5px solid #e0e0e0; border-radius: 6px; font-size: 13px; outline: none; background: #fff; }
+    .cron-input:focus { border-color: #C8102E; }
+
+    .cron-table-wrapper { background: #fff; border: 0.5px solid #e0e0e0; border-radius: 10px; overflow: hidden; }
+    .cron-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .cron-table thead tr { background: #1a1a1a; }
+    .cron-table thead th { padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 500; color: #fff; text-transform: uppercase; letter-spacing: 0.05em; }
+    .cron-table thead th.text-center { text-align: center; }
+    .cron-table tbody tr { border-bottom: 0.5px solid #f0f0f0; transition: background 0.1s; }
+    .cron-table tbody tr:last-child { border-bottom: none; }
+    .cron-table tbody tr:hover { background: #fafafa; }
+    .cron-table tbody td { padding: 12px 16px; color: #333; }
+    .cron-table tbody td.text-center { text-align: center; }
+
+    .cron-num { color: #aaa; font-size: 12px; width: 40px; }
+    .cron-nombre { font-weight: 500; color: #1a1a1a; }
+    .cron-mono { font-family: 'Courier New', monospace; color: #C8102E; font-size: 12px; }
+
+    .cron-tipo-badge { display: inline-flex; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 500; }
+    .tipo-libranza { background: #f0fdf4; color: #166534; border: 0.5px solid #bbf7d0; }
+    .tipo-personal { background: #eff6ff; color: #1e40af; border: 0.5px solid #bfdbfe; }
+
+    .btn-ver-detalles { background: #C8102E; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+    .btn-ver-detalles:hover { background: #a50d26; }
+
+    .cron-paginacion { display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; }
+    .cron-pag-info { font-size: 12px; color: #888; }
+    .cron-pag-btns { display: flex; gap: 4px; }
+    .btn-pag { background: #fff; border: 0.5px solid #e0e0e0; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; color: #444; transition: all 0.15s; }
+    .btn-pag:hover:not(:disabled) { border-color: #C8102E; color: #C8102E; }
+    .btn-pag:disabled { color: #ccc; cursor: not-allowed; }
+    .btn-pag-activo { background: #C8102E; color: #fff; border-color: #C8102E; }
+    .btn-pag-activo:hover { background: #C8102E; color: #fff; }
+</style>
+
+@code {
+    [Parameter] public string LoteId { get; set; } = string.Empty;
+
+    private List<CronogramaModel>? cronogramas;
+    private bool     isLoading      = true;
+    private string?  errorMessage;
+    private string?  filtro;
+    private int      paginaActual   = 1;
+    private int      porPagina      = 15;
+    private int      totalRegistros = 0;
+    private int      totalPaginas   => (int)Math.Ceiling((double)totalRegistros / porPagina);
+
+    protected override async Task OnInitializedAsync() => await CargarDatos();
+
+    private async Task CargarDatos()
+    {
+        try
+        {
+            isLoading = true;
+            totalRegistros = await CronogramaService.GetTotalCronogramasAsync(LoteId, filtro);
+            cronogramas    = await CronogramaService.GetCronogramasByLoteAsync(LoteId, paginaActual, porPagina, filtro);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar los cronogramas: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OnFiltroChanged(ChangeEventArgs e)
+    {
+        filtro       = e.Value?.ToString();
+        paginaActual = 1;
+        await CargarDatos();
+    }
+
+    private async Task PaginaAnterior()  { if (paginaActual > 1) { paginaActual--; await CargarDatos(); } }
+    private async Task PaginaSiguiente() { if (paginaActual < totalPaginas) { paginaActual++; await CargarDatos(); } }
+    private async Task IrAPagina(int p)  { paginaActual = p; await CargarDatos(); }
+
+    private void VerDetalles(string numeroPrestamo) => Nav.NavigateTo($"/detalles/{numeroPrestamo}");
+}
+

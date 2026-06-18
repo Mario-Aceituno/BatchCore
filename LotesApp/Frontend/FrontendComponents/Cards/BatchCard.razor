@@ -1,7 +1,7 @@
 ﻿@* ═══════════════════════════════════════════════
                   CARD DE LOTE
 ═══════════════════════════════════════════════ *@
-
+@inject NavigationManager Nav
 @using LotesApp.Models
 
 <div class="lot-card">
@@ -42,8 +42,13 @@
         </span>
     </div>
 
-    <!-- Acción -->
-    <div>
+    <!-- Acción -->    
+    <div class="btn-container">
+        <button class="btn-ver-cronogramas"
+                @onclick='() => Nav.NavigateTo($"/cronogramas/{Lote.Id}")'>
+            Cronogramas
+        </button>
+
         @if (Lote.Estado == "Listo para enviar")
         {
             <button class="btn-enviar"

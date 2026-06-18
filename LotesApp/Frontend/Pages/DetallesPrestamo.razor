@@ -1,0 +1,258 @@
+﻿@page "/detalles/{NumeroPrestamo}"
+@layout LotesLayout
+@rendermode InteractiveServer
+@using LotesApp.Models
+@using LotesApp.Services
+@inject CronogramaService CronogramaService
+@inject NavigationManager Nav
+
+<PageTitle>Detalles — @NumeroPrestamo</PageTitle>
+
+<div class="lotes-page">
+
+    <!-- NAVBAR -->
+    <BatchManagementNav />
+
+    <div class="lotes-content">
+
+        <!-- Encabezado con datos del cliente -->
+        <div class="det-header">
+            <button class="btn-volver" @onclick="Volver">← Volver a cronogramas</button>
+
+            @if (cronograma is not null)
+            {
+                <div class="det-cliente-card">
+                    <div class="det-cliente-info">
+                        <div class="det-cliente-nombre">@cronograma.NombreCliente</div>
+                        <div class="det-cliente-meta">
+                            <span class="det-meta-item">
+                                <span class="det-meta-label">Préstamo</span>
+                                <span class="det-meta-value cron-mono">@cronograma.NumeroPrestamo</span>
+                            </span>
+                            <span class="det-meta-sep">·</span>
+                            <span class="det-meta-item">
+                                <span class="det-meta-label">Teléfono</span>
+                                <span class="det-meta-value">@cronograma.NumeroTelefonico</span>
+                            </span>
+                            <span class="det-meta-sep">·</span>
+                            <span class="det-meta-item">
+                                <span class="det-meta-label">Tasa</span>
+                                <span class="det-meta-value">@cronograma.Tasa.ToString("N3")%</span>
+                            </span>
+                            <span class="det-meta-sep">·</span>
+                            <span class="det-meta-item">
+                                <span class="cron-tipo-badge @(cronograma.Tipo == "Libranza" ? "tipo-libranza" : "tipo-personal")">
+                                    @cronograma.Tipo
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="det-total-badge">@totalRegistros cuotas</div>
+                </div>
+            }
+        </div>
+
+        <!-- Filtro por fecha -->
+        <div class="cron-filtro-row">
+            <input class="cron-input"
+       type="month"
+       @oninput="OnFiltroChanged" />
+            @if (!string.IsNullOrWhiteSpace(filtroFecha))
+            {
+                <button class="btn-limpiar" @onclick="LimpiarFiltro">✕ Limpiar</button>
+            }
+        </div>
+
+        <!-- Tabla de detalles -->
+        @if (isLoading)
+        {
+            <div class="lotes-center">
+                <div class="lotes-spinner"></div>
+                <p>Cargando detalles...</p>
+            </div>
+        }
+        else if (errorMessage is not null)
+        {
+            <div class="lotes-error">⚠ @errorMessage</div>
+        }
+        else if (detalles is null || detalles.Count == 0)
+        {
+            <div class="lotes-center">No se encontraron detalles para este préstamo.</div>
+        }
+        else
+        {
+            <div class="cron-table-wrapper">
+                <table class="cron-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Fecha de pago</th>
+                            <th class="text-right">Cuota total</th>
+                            <th class="text-right">Saldo</th>
+                            <th class="text-right">Capital</th>
+                            <th class="text-right">Intereses</th>
+                            <th class="text-right">Cuota</th>
+                            <th class="text-right">Seguros</th>
+                            <th class="text-right">Cargo admin.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < detalles.Count; i++)
+                        {
+                            var detalle = detalles[i];
+                            var numero  = ((paginaActual - 1) * porPagina) + i + 1;
+                            <tr>
+                                <td class="cron-num">@numero</td>
+                                <td>@detalle.FechaPago.ToString("dd/MM/yyyy")</td>
+                                <td class="text-right det-cuota-total">@detalle.CuotaTotal.ToString("N2")</td>
+                                <td class="text-right">@detalle.Saldo.ToString("N2")</td>
+                                <td class="text-right">@detalle.CapitalPago.ToString("N2")</td>
+                                <td class="text-right">@detalle.InteresPago.ToString("N2")</td>
+                                <td class="text-right">@detalle.Cuota.ToString("N2")</td>
+                                <td class="text-right">@detalle.Seguros.ToString("N2")</td>
+                                <td class="text-right">@detalle.CargoAdministrativo.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div class="cron-paginacion">
+                <span class="cron-pag-info">
+                    Mostrando @(((paginaActual - 1) * porPagina) + 1)–@(Math.Min(paginaActual * porPagina, totalRegistros)) de @totalRegistros
+                </span>
+                <div class="cron-pag-btns">
+                    <button class="btn-pag" disabled="@(paginaActual == 1)" @onclick="PaginaAnterior">← Anterior</button>
+                    @for (int p = 1; p <= totalPaginas; p++)
+                    {
+                        var pagNum = p;
+                        <button class="btn-pag @(pagNum == paginaActual ? "btn-pag-activo" : "")"
+                                @onclick="() => IrAPagina(pagNum)">
+                            @pagNum
+                        </button>
+                    }
+                    <button class="btn-pag" disabled="@(paginaActual == totalPaginas)" @onclick="PaginaSiguiente">Siguiente →</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .lotes-page * { box-sizing: border-box; }
+    .lotes-page { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; min-height: 100vh; }
+    .lotes-content { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+    .lotes-center { text-align: center; padding: 4rem 0; color: #888; }
+    .lotes-spinner { width: 32px; height: 32px; border: 3px solid #f0f0f0; border-top-color: #C8102E; border-radius: 50%; animation: lotes-spin 0.7s linear infinite; margin: 0 auto 1rem; }
+    @@keyframes lotes-spin { to { transform: rotate(360deg); } }
+    .lotes-error { background: #fff5f5; border: 0.5px solid #fecaca; border-radius: 8px; padding: 1rem 1.25rem; color: #991b1b; font-size: 14px; }
+
+    .det-header { margin-bottom: 1.5rem; }
+    .btn-volver { background: none; border: none; color: #C8102E; font-size: 13px; cursor: pointer; padding: 0; font-weight: 500; margin-bottom: 12px; display: inline-block; }
+    .btn-volver:hover { text-decoration: underline; }
+
+    .det-cliente-card { background: #fff; border: 0.5px solid #e0e0e0; border-radius: 10px; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    .det-cliente-nombre { font-size: 18px; font-weight: 500; color: #1a1a1a; margin-bottom: 8px; }
+    .det-cliente-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .det-meta-item { display: flex; align-items: center; gap: 5px; }
+    .det-meta-label { font-size: 11px; color: #aaa; }
+    .det-meta-value { font-size: 13px; font-weight: 500; color: #333; }
+    .det-meta-sep { color: #ddd; }
+    .det-total-badge { background: #f5f5f5; border: 0.5px solid #e0e0e0; border-radius: 8px; padding: 0.5rem 1rem; font-size: 13px; font-weight: 500; color: #444; white-space: nowrap; }
+
+    .cron-filtro-row { margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; }
+    .cron-input { padding: 8px 14px; border: 0.5px solid #e0e0e0; border-radius: 6px; font-size: 13px; outline: none; background: #fff; }
+    .cron-input:focus { border-color: #C8102E; }
+    .btn-limpiar { background: none; border: 0.5px solid #e0e0e0; border-radius: 6px; padding: 7px 12px; font-size: 12px; cursor: pointer; color: #666; }
+    .btn-limpiar:hover { border-color: #C8102E; color: #C8102E; }
+
+    .cron-table-wrapper { background: #fff; border: 0.5px solid #e0e0e0; border-radius: 10px; overflow: hidden; overflow-x: auto; }
+    .cron-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .cron-table thead tr { background: #1a1a1a; }
+    .cron-table thead th { padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 500; color: #fff; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+    .cron-table thead th.text-right { text-align: right; }
+    .cron-table tbody tr { border-bottom: 0.5px solid #f0f0f0; transition: background 0.1s; }
+    .cron-table tbody tr:last-child { border-bottom: none; }
+    .cron-table tbody tr:hover { background: #fafafa; }
+    .cron-table tbody td { padding: 11px 16px; color: #333; white-space: nowrap; }
+    .cron-table tbody td.text-right { text-align: right; font-family: 'Courier New', monospace; font-size: 12px; }
+
+    .cron-num { color: #aaa; font-size: 12px; width: 40px; }
+    .cron-mono { font-family: 'Courier New', monospace; color: #C8102E; font-size: 12px; }
+    .det-cuota-total { font-weight: 600; color: #1a1a1a !important; }
+
+    .cron-tipo-badge { display: inline-flex; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 500; }
+    .tipo-libranza { background: #f0fdf4; color: #166534; border: 0.5px solid #bbf7d0; }
+    .tipo-personal { background: #eff6ff; color: #1e40af; border: 0.5px solid #bfdbfe; }
+
+    .cron-paginacion { display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; }
+    .cron-pag-info { font-size: 12px; color: #888; }
+    .cron-pag-btns { display: flex; gap: 4px; }
+    .btn-pag { background: #fff; border: 0.5px solid #e0e0e0; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; color: #444; transition: all 0.15s; }
+    .btn-pag:hover:not(:disabled) { border-color: #C8102E; color: #C8102E; }
+    .btn-pag:disabled { color: #ccc; cursor: not-allowed; }
+    .btn-pag-activo { background: #C8102E; color: #fff; border-color: #C8102E; }
+</style>
+
+@code {
+    [Parameter] public string NumeroPrestamo { get; set; } = string.Empty;
+
+    private CronogramaModel?    cronograma;
+    private List<DetallePrestamo>? detalles;
+    private bool    isLoading      = true;
+    private string? errorMessage;
+    private string? filtroFecha;
+    private int     paginaActual   = 1;
+    private int     porPagina      = 12;
+    private int     totalRegistros = 0;
+    private int     totalPaginas   => (int)Math.Ceiling((double)totalRegistros / porPagina);
+
+    // Guardamos el loteId para poder volver
+    private string? loteIdOrigen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        cronograma  = await CronogramaService.GetCronogramaByPrestamoAsync(NumeroPrestamo);
+        loteIdOrigen = cronograma?.LoteId;
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        try
+        {
+            isLoading      = true;
+            totalRegistros = await CronogramaService.GetTotalDetallesAsync(NumeroPrestamo, filtroFecha);
+            detalles       = await CronogramaService.GetDetallesByPrestamoAsync(NumeroPrestamo, paginaActual, porPagina, filtroFecha);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar los detalles: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OnFiltroChanged(ChangeEventArgs e)
+    {
+        filtroFecha  = e.Value?.ToString();
+        paginaActual = 1;
+        await CargarDatos();
+    }
+
+    private async Task LimpiarFiltro()
+    {
+        filtroFecha  = null;
+        paginaActual = 1;
+        await CargarDatos();
+    }
+
+    private async Task PaginaAnterior()  { if (paginaActual > 1) { paginaActual--; await CargarDatos(); } }
+    private async Task PaginaSiguiente() { if (paginaActual < totalPaginas) { paginaActual++; await CargarDatos(); } }
+    private async Task IrAPagina(int p)  { paginaActual = p; await CargarDatos(); }
+
+    private void Volver() => Nav.NavigateTo(loteIdOrigen is not null ? $"/cronogramas/{loteIdOrigen}" : "/lotes");
+}

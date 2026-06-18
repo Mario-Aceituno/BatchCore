@@ -106,9 +106,17 @@
         background: #3b82f6;
     }
 
+.btn-container{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 250px;     
+}
+
 .btn-enviar {
-    background: #C8102E;
-    color: #fff;
+    background: #E5E7EB;
+    color: #1F2937;
     border: none;
     border-radius: 6px;
     padding: 8px 20px;
@@ -120,7 +128,7 @@
 }
 
     .btn-enviar:hover:not(:disabled) {
-        background: #a50d26;
+        background: #D1D5DB;
     }
 
     .btn-enviar:disabled {
@@ -134,3 +142,21 @@
     text-align: center;
     display: block;
 }
+
+.btn-ver-cronogramas {
+    background: #C8102E;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.15s ease;
+    margin-bottom:5px;
+}
+
+    .btn-ver-cronogramas:hover {
+        background: #a50d26;
+    }

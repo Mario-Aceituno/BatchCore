@@ -15,6 +15,8 @@ builder.Services.Configure<LotesConfig>(
 // Registro del servicio de lotes
 builder.Services.AddScoped<LoteService>();
 
+builder.Services.AddScoped<CronogramaService>();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
